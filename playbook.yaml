@@ -1,0 +1,47 @@
+---
+
+- hosts: 192.168.0.42
+
+  tasks:
+  - name: Installation du serveur Apache et PHP
+    yum:
+     name: "{{ item }}"
+     state: present
+    loop:
+      - httpd
+      - php
+      - nano
+      - mariadb-server
+
+  - name: Démarrage du serveur apache
+    systemd:
+     name: "{{ item }}"
+     state: started
+    loop:
+      - httpd
+      - mariadb
+
+  - name: Copie des fichiers php
+    copy:
+     src: "{{ item }}"
+     dest: /var/www/html/
+    loop:
+     - create_db.php
+     - create_table.php
+    
+jenkinsfiles : 
+node{
+    stage('Clone git') {
+        checkout scm
+    }
+    stage('Prerequis'){
+        sh apk add ansible sshpass
+        sh echo '192.168.88.132 app-salaire' > /etc/hosts
+        sh rm -rf /root/.ssh
+        sh ssh-keygen -q -t rsa -N '' -f ~/.ssh/id_rsa
+        sh sshpass -p 'centos' ssh-copy-id -o stricthostkeychecking=no root@app-salaire
+    }
+    stage('Ansible') {
+      ansiblePlaybook (
+          colorized: true,
+          playbook: 'playbook.yaml',
